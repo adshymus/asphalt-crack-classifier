@@ -145,7 +145,7 @@ class CrackDetector:
         lower_range = np.array([0])
         upper_range = np.array([int(self._mean-0.5*self._std)])
         self._thresholded_image = cv2.inRange(self._gaussian_image, lower_range, upper_range)
-        self._median_image = cv2.medianBlur(self._thresholded_image, 21)
+        self._median_image = cv2.medianBlur(self._thresholded_image, 31)
         pooled_image = block_reduce(self._median_image, (10, 10), np.max)
 
         self._pooled_image = np.asarray(pooled_image, np.uint8)
@@ -158,6 +158,7 @@ class CrackDetector:
 
         blob_mask = np.zeros(self._closed_image.shape, dtype=np.uint8)
         blobs_mask = np.zeros(self._closed_image.shape, dtype=np.uint8)
+        blobs = []
 
         for i, contour in enumerate(contours):
             c_area = cv2.contourArea(contour)
@@ -165,8 +166,9 @@ class CrackDetector:
                 cv2.drawContours(blob_mask, contours, i, (255, 255, 255), cv2.FILLED)
                 blob_mask = cv2.bitwise_and(self._closed_image, blob_mask)
                 blobs_mask = cv2.bitwise_or(blobs_mask, blob_mask)
+                blobs.append(contour)
         
-        self._blobs = contours
+        self._blobs = blobs
         self._mask = blobs_mask
 
     def __calcNumberOfPixels(self):
