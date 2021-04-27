@@ -33,6 +33,30 @@ class CrackDetector:
     @property
     def ImageGray(self):
         return self._gray_image
+    
+    @property
+    def ImageGaussian(self):
+        return self._gaussian_image
+
+    @property
+    def ImageThreshold(self):
+        return self._thresholded_image
+    
+    @property
+    def ImageMedian(self):
+        return self._median_image
+    
+    @property
+    def ImagePooling(self):
+        return self._pooled_image
+    
+    @property
+    def ImageOpening(self):
+        return self._opened_image
+    
+    @property
+    def ImageClosing(self):
+        return self._closed_image
 
     @property
     def StandardDeviation(self):
@@ -61,12 +85,47 @@ class CrackDetector:
     @property
     def NumberOfBlobs(self):
         return len(self._blobs)
+    
+    def ShowImages(self, nrows, save = False, **kwargs):
+        remainder = len(kwargs) % nrows
 
-    def ShowImage(self):
-        plt.imshow(self._image)
+        if remainder > 0:
+            print("Make sure the number of rows is divisable by the number of images")
+            return
 
-    def ShowImageGray(self):
-        plt.imshow(self._gray_image, cmap="gray")
+        ncols = len(kwargs) // nrows
+        fig, axs = plt.subplots(nrows, ncols, constrained_layout=True)
+        keys = kwargs.keys()
+        keys = list(reversed(keys))
+
+        if nrows == 1 or ncols == 1:
+            num = nrows if nrows > ncols else ncols
+            for x in range(0, num):
+                key = keys.pop()
+                value = kwargs[key]
+                key = re.sub(r"(?<=\w)([A-Z])", r" \1", key)
+                if key == "Original":
+                    axs[x].imshow(value)
+                else:
+                    axs[x].imshow(value, cmap="gray")
+                axs[x].set_title(key)
+                axs[x].axis('off')
+                axs[x].tight = True
+        else:
+            for x in range(0, nrows):
+                for y in range(0, ncols):
+                    key = keys.pop()
+                    value = kwargs[key]
+                    key = re.sub(r"(?<=\w)([A-Z])", r" \1", key)
+                    if key == "Original":
+                        axs[x, y].imshow(value)
+                    else:
+                        axs[x, y].imshow(value, cmap="gray")
+                    axs[x, y].set_title(key)
+                    axs[x, y].axis('off')
+                    axs[x, y].tight = True
+        if save:
+            fig.savefig('fig.jpg', dpi=150)
     
     def ShowProcessingSteps(self, save = False):
         fig, axs = plt.subplots(3, 3)
@@ -94,9 +153,6 @@ class CrackDetector:
 
         if save:
             fig.savefig('fig.jpg', dpi=150)
-    
-    def ShowMask(self):
-        plt.imshow(self._mask, cmap="gray")
 
     def LoadImageFromPath(self, path):
         try:
