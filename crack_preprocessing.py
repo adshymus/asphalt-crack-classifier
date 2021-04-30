@@ -103,7 +103,7 @@ class CrackDetector:
             for x in range(0, num):
                 key = keys.pop()
                 value = kwargs[key]
-                key = re.sub(r"(?<=\w)([A-Z])", r" \1", key)
+                key = re.sub(r"(?<=\w)([A-Z]|\d+x\d+)", r" \1", key)
                 if key == "Original":
                     axs[x].imshow(value)
                 else:
@@ -116,7 +116,7 @@ class CrackDetector:
                 for y in range(0, ncols):
                     key = keys.pop()
                     value = kwargs[key]
-                    key = re.sub(r"(?<=\w)([A-Z])", r" \1", key)
+                    key = re.sub(r"(?<=\w)([A-Z]|\d+x\d+)", r" \1", key)
                     if key == "Original":
                         axs[x, y].imshow(value)
                     else:
