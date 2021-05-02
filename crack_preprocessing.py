@@ -2,11 +2,14 @@ import os
 import re
 import cv2
 import math
+import random
 import numpy as np
-from scipy.optimize import curve_fit
-from skimage.measure import block_reduce
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from scipy.optimize import curve_fit
+from skimage.measure import block_reduce
+from numba import prange
 
 class CrackDetector:
     def __init__(self):
@@ -128,23 +131,22 @@ class CrackDetector:
             fig.savefig('fig.jpg', dpi=150)
     
     def ShowProcessingSteps(self, save = False):
-        fig, axs = plt.subplots(3, 3)
         axs[0, 0].imshow(self._image)
         axs[0, 0].set_title("Original")
         axs[0, 1].imshow(self._gray_image, cmap="gray")
-        axs[0, 1].set_title("Grayscalling")
+        axs[0, 1].set_title("Grayscaling")
         axs[0, 2].imshow(self._gaussian_image, cmap="gray")
         axs[0, 2].set_title("Gaussian filtering")
         axs[1, 0].imshow(self._thresholded_image, cmap="gray")
         axs[1, 0].set_title("Thresholding")
-        axs[1, 1].imshow(self._median_image, cmap="gray")
-        axs[1, 1].set_title("Median filtering")
-        axs[1, 2].imshow(self._pooled_image, cmap="gray")
-        axs[1, 2].set_title("Max pooling")
-        axs[2, 0].imshow(self._opened_image, cmap="gray")
-        axs[2, 0].set_title("Opening")
-        axs[2, 1].imshow(self._closed_image, cmap="gray")
-        axs[2, 1].set_title("Closing")
+        axs[1, 1].imshow(self._pooled_image, cmap="gray")
+        axs[1, 1].set_title("Max pooling")
+        axs[1, 2].imshow(self._median_image, cmap="gray")
+        axs[1, 2].set_title("Median filtering")
+        axs[2, 0].imshow(self._closed_image, cmap="gray")
+        axs[2, 0].set_title("Closing")
+        axs[2, 1].imshow(self._opened_image, cmap="gray")
+        axs[2, 1].set_title("Opening")
         axs[2, 2].imshow(self._mask, cmap="gray")
         axs[2, 2].set_title("Mask")
 
@@ -166,6 +168,8 @@ class CrackDetector:
         names = os.listdir()
         folders = [name for name in names if os.path.isdir(name) and not name.endswith("_processed")]
 
+        data = []
+
         for folder in folders:
             os.makedirs(folder + "_processed", exist_ok=True)
             all_files = os.listdir(folder)
@@ -173,57 +177,79 @@ class CrackDetector:
 
             for file in files:
                 try:
-                    self.LoadImageFromPath(folder + "/" + file)
-                    self.ExtractFeatures()
-                    mpimg.imsave(folder + "_processed/" + file, self._mask, cmap="gray")
+                    image = mpimg.imread(folder + "/" + file)
+                    self.ExtractFeatures(image)
+                    features = [folder, self.Mean, self.StandardDeviation, self.MaxElongation, self.PixelRatio]
+                    data.append(features)
+                    # uncomment the following line if you need to save the mask
+                    #mpimg.imsave(folder + "_processed/" + file, self.Mask, cmap="gray")
+                    
+                    for r in range(0, 4):
+                        random_brightness = random.randrange(-25, 25)
+                        random_contrast = random.uniform(0.8, 1.2)
+                        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                        gray_image = random_contrast * gray_image + random_brightness
+                        gray_image = np.array(gray_image, dtype=np.uint8)
+                        self.ExtractFeatures(image=gray_image, gray=True)
+                        features = [folder, self.Mean, self.StandardDeviation, self.MaxElongation, self.PixelRatio]
+                        data.append(features)                
                 except:
                     print("folder, file", folder, file)
-
+        
         os.chdir(current_path)
+        header = ['Class', 'Mean', 'Standard deviation', 'Elongation', 'Pixel Ratio']
+        data_frame = pd.DataFrame(data)
+        data_frame.to_csv('feature.csv', index=False, sep=";", header=header)
 
-    def ExtractFeatures(self, image = None):
+    def ExtractFeatures(self, image = None, gray=False):
         if image is not None:
             self._image = image
         if self._image is None:
             print("Load an image with LoadImageFromPath or pass an image to ExtractFeatures")
             return
-        self.__segmentImage()
+        self.__segmentImage(gray=gray)
         self.__calcNumberOfPixels()
         self.__calcMaximumElongation()
 
-    def __segmentImage(self):
+    def __segmentImage(self, gray=False):
         # gray scalling, gaussian filter, threshold, median blurring, max pooling then morphology
-        self._gray_image = cv2.cvtColor(self._image, cv2.COLOR_BGR2GRAY)
+        if not gray:
+            self._gray_image = cv2.cvtColor(self._image, cv2.COLOR_BGR2GRAY)
+        else:
+            self._gray_image = self._image
+
+        
         self._mean = np.mean(self._gray_image)
         self._std = np.std(self._gray_image)
-        self._gaussian_image = cv2.GaussianBlur(self._gray_image, (41, 41), 0)
+        self._gaussian_image = cv2.GaussianBlur(self._gray_image, (101, 101), 0)
 
-        lower_range = np.array([0])
-        upper_range = np.array([int(self._mean-0.5*self._std)])
-        self._thresholded_image = cv2.inRange(self._gaussian_image, lower_range, upper_range)
-        self._median_image = cv2.medianBlur(self._thresholded_image, 31)
-        pooled_image = block_reduce(self._median_image, (10, 10), np.max)
+        self._thresholded_image = cv2.adaptiveThreshold(self._gaussian_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 189, 7)
+        self._thresholded_image = cv2.bitwise_not(self._thresholded_image)
 
+        pooled_image = block_reduce(self._thresholded_image, (10, 10), np.max)
         self._pooled_image = np.asarray(pooled_image, np.uint8)
+        self._pooled_image[self._pooled_image < 255] = 0
 
-        kernel = np.ones((3,3))
-        self._opened_image = cv2.morphologyEx(self._pooled_image, cv2.MORPH_OPEN, kernel)
-        self._closed_image = cv2.morphologyEx(self._opened_image, cv2.MORPH_CLOSE, kernel)
-        
-        contours, _ = cv2.findContours(self._closed_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        self._median_image = self.__AdaptiveMedianFilter(self._pooled_image)
+        self._median_image = np.array(self._median_image, dtype=np.uint8)
 
-        blob_mask = np.zeros(self._closed_image.shape, dtype=np.uint8)
-        blobs_mask = np.zeros(self._closed_image.shape, dtype=np.uint8)
+        self._closed_image = cv2.morphologyEx(self._median_image, cv2.MORPH_CLOSE, np.ones((6,6)))
+        self._opened_image = cv2.morphologyEx(self._closed_image, cv2.MORPH_OPEN, np.ones((3,3)))
+
+        contours, _ = cv2.findContours(self._opened_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        blob_mask = np.zeros(self._opened_image.shape, dtype=np.uint8)
+        blobs_mask = np.zeros(self._opened_image.shape, dtype=np.uint8)
         blobs = []
 
         for i, contour in enumerate(contours):
             c_area = cv2.contourArea(contour)
-            if c_area >= 100:
+            if c_area >= 50:
                 cv2.drawContours(blob_mask, contours, i, (255, 255, 255), cv2.FILLED)
-                blob_mask = cv2.bitwise_and(self._closed_image, blob_mask)
+                blob_mask = cv2.bitwise_and(self._opened_image, blob_mask)
                 blobs_mask = cv2.bitwise_or(blobs_mask, blob_mask)
                 blobs.append(contour)
-        
+
         self._blobs = blobs
         self._mask = blobs_mask
 
@@ -263,3 +289,52 @@ class CrackDetector:
 
     def __calculateDistance(x1, y1, x2, y2):
         return math.sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2))
+
+    def __padding(self, img, pad):
+        padded_image = np.zeros((img.shape[0]+2*pad,img.shape[1]+2*pad))
+        padded_image[pad:-pad,pad:-pad] = img
+        return padded_image
+
+    def __AdaptiveMedianFilter(self, image, s=1, sMax=6):
+        H,W = image.shape
+        a = sMax//2
+        padded_image = self.__padding(image,a)
+
+        filtered_image = np.zeros(padded_image.shape)
+
+        for i in prange(a,H+a+1):
+            for j in range(a,W+a+1):
+                value = self.__Lvl_A(padded_image,i,j,s,sMax)
+                filtered_image[i,j] = value
+
+        return filtered_image[a:-a,a:-a]
+
+    def __Lvl_A(self, mat,x,y,s,sMax):
+        window = mat[x-(s//2):x+(s//2)+1,y-(s//2):y+(s//2)+1]
+        Zmin = np.min(window)
+        Zmed = np.median(window)
+        Zmax = np.max(window)
+
+        A1 = Zmed - Zmin
+        A2 = Zmed - Zmax
+
+        if A1 > 0 and A2 < 0:
+            return self.__Lvl_B(window, Zmin, Zmed, Zmax)
+        else:
+            s += 2 
+            if s <= sMax:
+                return self.__Lvl_A(mat,x,y,s,sMax)
+            else:
+                return Zmed
+    
+    def __Lvl_B(self, window, Zmin, Zmed, Zmax):
+        h,w = window.shape
+
+        Zxy = window[h//2,w//2]
+        B1 = Zxy - Zmin
+        B2 = Zxy - Zmax
+
+        if B1 > 0 and B2 < 0 :
+            return Zxy
+        else:
+            return Zmed
