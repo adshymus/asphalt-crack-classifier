@@ -131,6 +131,7 @@ class CrackDetector:
             fig.savefig('fig.jpg', dpi=150)
     
     def ShowProcessingSteps(self, save = False):
+        fig, axs = plt.subplots(3, 3)
         axs[0, 0].imshow(self._image)
         axs[0, 0].set_title("Original")
         axs[0, 1].imshow(self._gray_image, cmap="gray")
