@@ -186,14 +186,14 @@ class CrackDetector:
                     #mpimg.imsave(folder + "_processed/" + file, self.Mask, cmap="gray")
                     
                     for r in range(0, 4):
-                        random_brightness = random.randrange(-25, 25)
-                        random_contrast = random.uniform(0.8, 1.2)
+                        random_brightness = random.randrange(-20, 20)
+                        random_contrast = random.uniform(0.9, 1.1)
                         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                         gray_image = random_contrast * gray_image + random_brightness
                         gray_image = np.array(gray_image, dtype=np.uint8)
                         self.ExtractFeatures(image=gray_image, gray=True)
                         features = [folder, self.Mean, self.StandardDeviation, self.MaxElongation, self.PixelRatio]
-                        data.append(features)                
+                        data.append(features)
                 except:
                     print("folder, file", folder, file)
         
