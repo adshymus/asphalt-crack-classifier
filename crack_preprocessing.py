@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from scipy.optimize import curve_fit
 from skimage.measure import block_reduce
-from numba import prange
 
 class CrackDetector:
     def __init__(self):
@@ -25,9 +24,14 @@ class CrackDetector:
         self._blobs = None
         self._numberOfWhitePixels = 0
         self._numberOfBlackPixels = 0
-        self._maxElongation = 0
-        self._mean = 0
-        self._std = 0
+        self._maxElongation = 0.0
+        self._averageElongation = 0.0
+        self._maxCompactness = 0.0
+        self._averageCompactness = 0.0
+        self._maxEccentricity = 0.0
+        self._averageEccentricity = 0.0
+        self._mean = 0.0
+        self._std = 0.0
 
     @property
     def Image(self):
@@ -72,6 +76,26 @@ class CrackDetector:
     @property
     def MaxElongation(self):
         return self._maxElongation
+    
+    @property
+    def AverageElongation(self):
+        return self._averageElongation
+
+    @property
+    def MaxCompactness(self):
+        return self._maxCompactness
+    
+    @property
+    def AverageCompactness(self):
+        return self._averageCompactness
+    
+    @property
+    def MaxEccentricity(self):
+        return self._maxExcentricity
+    
+    @property
+    def AverageEccentricity(self):
+        return self._averageEccentricity
     
     @property
     def Mean(self):
@@ -180,7 +204,7 @@ class CrackDetector:
                 try:
                     image = mpimg.imread(folder + "/" + file)
                     self.ExtractFeatures(image)
-                    features = [folder, self.Mean, self.StandardDeviation, self.MaxElongation, self.PixelRatio]
+                    features = [folder, self._mean, self._std, self._maxElongation, self._averageElongation, self._maxCompactness, self._averageCompactness, self._maxEccentricity, self._averageEccentricity, self.PixelRatio]
                     data.append(features)
                     # uncomment the following line if you need to save the mask
                     #mpimg.imsave(folder + "_processed/" + file, self.Mask, cmap="gray")
@@ -192,13 +216,14 @@ class CrackDetector:
                         gray_image = random_contrast * gray_image + random_brightness
                         gray_image = np.array(gray_image, dtype=np.uint8)
                         self.ExtractFeatures(image=gray_image, gray=True)
-                        features = [folder, self.Mean, self.StandardDeviation, self.MaxElongation, self.PixelRatio]
+                        features = [folder, self._mean, self._std, self._maxElongation, self._averageElongation, self._maxCompactness, self._averageCompactness, self._maxEccentricity, self._averageEccentricity, self.PixelRatio]
                         data.append(features)
-                except:
+                except Exception as e:
+                    print(e)
                     print("folder, file", folder, file)
         
         os.chdir(current_path)
-        header = ['Class', 'Mean', 'Standard deviation', 'Elongation', 'Pixel Ratio']
+        header = ['Class', 'Mean', 'Standard deviation', 'Max elongation', 'Average elongation', 'Max compactness', 'Average compactess', 'Max eccentricity', 'Average eccentricity', 'Pixel ratio']
         data_frame = pd.DataFrame(data)
         data_frame.to_csv('feature.csv', index=False, sep=";", header=header)
 
@@ -243,14 +268,32 @@ class CrackDetector:
         blobs_mask = np.zeros(self._opened_image.shape, dtype=np.uint8)
         blobs = []
 
+        total_compactness = 0.0
+        self._maxCompactness = 0.0
+        self._averageCompactness = 0.0
+
+        total_eccentricity = 0.0
+        self._maxEccentricity = 0.0
+        self._averageEccentricity = 0.0
+
         for i, contour in enumerate(contours):
             c_area = cv2.contourArea(contour)
             if c_area >= 50:
+                perimeter = cv2.arcLength(contour, True)
+                compactness = (4 * math.pi * c_area) / math.pow(perimeter, 2)
+                total_compactness += compactness
+                self._maxCompactness = compactness if self._maxCompactness < compactness else self._maxCompactness
+                (x,y),(major_axis, minor_axis), angle = cv2.fitEllipse(contour)
+                eccentricity = minor_axis / major_axis
+                total_eccentricity += eccentricity
+                self._maxEccentricity = eccentricity if self._maxEccentricity < eccentricity else self._maxEccentricity
                 cv2.drawContours(blob_mask, contours, i, (255, 255, 255), cv2.FILLED)
                 blob_mask = cv2.bitwise_and(self._opened_image, blob_mask)
                 blobs_mask = cv2.bitwise_or(blobs_mask, blob_mask)
                 blobs.append(contour)
-
+        
+        self._averageCompactness = total_compactness / len(contours)
+        self._averageEccentricity = total_eccentricity / len(contours)
         self._blobs = blobs
         self._mask = blobs_mask
 
@@ -261,15 +304,16 @@ class CrackDetector:
         for row in self._mask:
             for pixel in row:
                 if pixel > 0:
-                    numberOfWhitePixels = numberOfWhitePixels + 1
+                    numberOfWhitePixels += 1
                 else:
-                    numberOfBlackPixels = numberOfBlackPixels + 1
+                    numberOfBlackPixels += 1
         
         self._numberOfBlackPixels = numberOfBlackPixels
         self._numberOfWhitePixels = numberOfWhitePixels
 
     def __calcMaximumElongation(self):
-        maxElongation = 0.0
+        max_elongation = 0.0
+        total_elongation = 0.0
         for index, blob in enumerate(self._blobs):
             rect = cv2.minAreaRect(blob)
             box = cv2.boxPoints(rect)
@@ -284,9 +328,11 @@ class CrackDetector:
                 width = length1
             if width > 0.0:
                 elongation = height / width
-                maxElongation = elongation if maxElongation < elongation else maxElongation
+                total_elongation = elongation
+                max_elongation = elongation if max_elongation < elongation else max_elongation
         
-        self._maxElongation = maxElongation
+        self._maxElongation = max_elongation
+        self._averageElongation = total_elongation / len(self._blobs)
 
     def __calculateDistance(x1, y1, x2, y2):
         return math.sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2))
@@ -302,9 +348,10 @@ class CrackDetector:
         padded_image = self.__padding(image,a)
 
         filtered_image = np.zeros(padded_image.shape)
+        max_range = H+a+1
 
-        for i in prange(a,H+a+1):
-            for j in range(a,W+a+1):
+        for i in range(a, max_range):
+            for j in range(a, max_range):
                 value = self.__Lvl_A(padded_image,i,j,s,sMax)
                 filtered_image[i,j] = value
 
