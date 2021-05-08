@@ -71,7 +71,9 @@ class CrackDetector:
     
     @property
     def PixelRatio(self):
-        return self._numberOfWhitePixels / self._numberOfBlackPixels
+        if self._numberOfBlackPixels != 0:
+            return self._numberOfWhitePixels / self._numberOfBlackPixels
+        return 0
     
     @property
     def MaxElongation(self):
@@ -292,8 +294,9 @@ class CrackDetector:
                 blobs_mask = cv2.bitwise_or(blobs_mask, blob_mask)
                 blobs.append(contour)
         
-        self._averageCompactness = total_compactness / len(contours)
-        self._averageEccentricity = total_eccentricity / len(contours)
+        if len(contours) != 0:
+            self._averageCompactness = total_compactness / len(contours)
+            self._averageEccentricity = total_eccentricity / len(contours)
         self._blobs = blobs
         self._mask = blobs_mask
 
@@ -332,7 +335,9 @@ class CrackDetector:
                 max_elongation = elongation if max_elongation < elongation else max_elongation
         
         self._maxElongation = max_elongation
-        self._averageElongation = total_elongation / len(self._blobs)
+
+        if len(self._blobs) != 0:
+            self._averageElongation = total_elongation / len(self._blobs)
 
     def __calculateDistance(x1, y1, x2, y2):
         return math.sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2))
