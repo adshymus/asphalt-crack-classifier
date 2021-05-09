@@ -1,5 +1,7 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
@@ -48,7 +50,23 @@ class CrackClassifier:
         arr = []
         arr.append(features)
         features = self._scaler.transform(arr)
-        return self._classifier.predict(features)
+        prediction = self._classifier.predict(features)
+        return self._labels[prediction[0]]
+    
+    def PredictFromFolder(self, path):
+        if not os.path.isdir(path):
+            print("Expected a folder!")
+            return
+        files = os.listdir(path)
+
+        for file in files:
+            try:
+                image = mpimg.imread(path + "/" + file)
+                prediction = self.Predict(image)
+                print(f"image {file} is {prediction}")
+
+            except:
+                print(f"error occured when prediction file {file}")
 
     def ShowTestingResults(self):
         self._predictions = self._classifier.predict(self._testing_set)
