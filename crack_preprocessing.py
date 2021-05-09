@@ -205,8 +205,8 @@ class CrackDetector:
             for file in files:
                 try:
                     image = mpimg.imread(folder + "/" + file)
-                    self.ExtractFeatures(image)
-                    features = [folder, self._mean, self._std, self._maxElongation, self._averageElongation, self._maxCompactness, self._averageCompactness, self._maxEccentricity, self._averageEccentricity, self.PixelRatio]
+                    features = self.ExtractFeatures(image)
+                    features[:0] = [folder] + [file]
                     data.append(features)
                     # uncomment the following line if you need to save the mask
                     #mpimg.imsave(folder + "_processed/" + file, self.Mask, cmap="gray")
@@ -217,8 +217,8 @@ class CrackDetector:
                         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                         gray_image = random_contrast * gray_image + random_brightness
                         gray_image = np.array(gray_image, dtype=np.uint8)
-                        self.ExtractFeatures(image=gray_image, gray=True)
-                        features = [folder, self._mean, self._std, self._maxElongation, self._averageElongation, self._maxCompactness, self._averageCompactness, self._maxEccentricity, self._averageEccentricity, self.PixelRatio]
+                        features = self.ExtractFeatures(image=gray_image, gray=True)
+                        features[:0] = [folder] + [file]
                         data.append(features)
                 except Exception as e:
                     print(e)
@@ -238,6 +238,7 @@ class CrackDetector:
         self.__segmentImage(gray=gray)
         self.__calcNumberOfPixels()
         self.__calcMaximumElongation()
+        return [self._mean, self._std, self._maxElongation, self._averageElongation, self._maxCompactness, self._averageCompactness, self._maxEccentricity, self._averageEccentricity, self.PixelRatio]
 
     def __segmentImage(self, gray=False):
         # gray scalling, gaussian filter, threshold, median blurring, max pooling then morphology
