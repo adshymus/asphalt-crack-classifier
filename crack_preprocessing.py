@@ -225,7 +225,7 @@ class CrackDetector:
                     print("folder, file", folder, file)
         
         os.chdir(current_path)
-        header = ['Class', 'Mean', 'Standard deviation', 'Max elongation', 'Average elongation', 'Max compactness', 'Average compactess', 'Max eccentricity', 'Average eccentricity', 'Pixel ratio']
+        header = ['Class', 'File', 'Mean', 'Standard deviation', 'Max elongation', 'Average elongation', 'Max compactness', 'Average compactess', 'Max eccentricity', 'Average eccentricity', 'Pixel ratio']
         data_frame = pd.DataFrame(data)
         data_frame.to_csv('feature.csv', index=False, sep=";", header=header)
 
