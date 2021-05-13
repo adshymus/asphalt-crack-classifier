@@ -1,11 +1,12 @@
 import os
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score, precision_score, recall_score, f1_score, classification_report
 from crack_preprocessing import CrackDetector
 from matplotlib.colors import ListedColormap
 
@@ -72,20 +73,41 @@ class CrackClassifier:
             except:
                 print(f"error occured when prediction file {file}")
 
-    def ShowTestingResults(self):
+    def ShowTestingResults(self, extra_info = None, save = False):
         self._predictions = self._classifier.predict(self._testing_set)
         self._correctly_predicted = (self._testing_set_classes == self._predictions).sum()
         self._incorrectly_predicted = len(self._predictions) - self._correctly_predicted
 
         self._confusion_matrix = confusion_matrix(self._testing_set_classes, self._predictions)
 
-        print(f"Test Result for model: {type(self._classifier).__name__}")
-        print("_______________________________________________")
-        print(f"Correctly labelled: {self._correctly_predicted}")
-        print(f"Incorrectly labelled: {self._incorrectly_predicted}")
-        print(f"Accuracy: {100 * self._correctly_predicted / len(self._predictions):.2f}%")
-        print("_______________________________________________")
-        print(f"Confusion Matrix: \n")
+        if save:
+            file = open("output.txt", "w")
+            fun = file.write
+        else:
+            fun = print
+
+        fun("Test Result for model: {}\n".format(type(self._classifier).__name__))
+        fun("_______________________________________________\n")
+        if extra_info:
+            fun(extra_info + "\n")
+        fun('Correctly labelled: {}\n'.format(self._correctly_predicted))
+        fun('Incorrectly labelled: {}\n'.format(self._incorrectly_predicted))
+        tmp = 100 * self._correctly_predicted / len(self._predictions)
+        fun('Accuracy: {:.2f} %\n'.format(tmp))
+        string = np.array2string(self._confusion_matrix, precision=2, separator=',')
+        fun(string + "\n\n")
+        fun('Micro Precision: {:.2f} \n'.format(precision_score(self._testing_set_classes, self._predictions, average='micro')))
+        fun('Micro Recall: {:.2f} \n'.format(recall_score(self._testing_set_classes, self._predictions, average='micro')))
+        fun('Micro F1-score: {:.2f} \n'.format(f1_score(self._testing_set_classes, self._predictions, average='micro')))
+
+        fun('Macro Precision: {:.2f}\n'.format(precision_score(self._testing_set_classes, self._predictions, average='macro')))
+        fun('Macro Recall: {:.2f}\n'.format(recall_score(self._testing_set_classes, self._predictions, average='macro')))
+        fun('Macro F1-score: {:.2f}\n'.format(f1_score(self._testing_set_classes, self._predictions, average='macro')))
+
+        fun('Weighted Precision: {:.2f}\n'.format(precision_score(self._testing_set_classes, self._predictions, average='weighted')))
+        fun('Weighted Recall: {:.2f}\n'.format(recall_score(self._testing_set_classes, self._predictions, average='weighted')))
+        fun('Weighted F1-score: {:.2f}\n'.format(f1_score(self._testing_set_classes, self._predictions, average='weighted')))
+        fun(classification_report(self._testing_set_classes, self._predictions, target_names=self._labels))
         disp = ConfusionMatrixDisplay(confusion_matrix=self._confusion_matrix)
         disp.plot()
 
