@@ -76,7 +76,7 @@ class CrackClassifier:
 
         self._confusion_matrix = confusion_matrix(self._testing_set_classes, self._predictions)
 
-        print(f"Test Result for model: {type(self._classifier).__name__}")  
+        print(f"Test Result for model: {type(self._classifier).__name__}")
         print("_______________________________________________")
         print(f"Correctly labelled: {self._correctly_predicted}")
         print(f"Incorrectly labelled: {self._incorrectly_predicted}")
