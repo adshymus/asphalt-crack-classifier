@@ -16,6 +16,7 @@ class CrackClassifier:
         self._pca = PCA(n_components=3)
         self._principle_components = None
         self._classifier = None
+        self._confusion_matrix = None
         self._file_data = []
         self._features = []
         self._classes = []
@@ -31,7 +32,7 @@ class CrackClassifier:
 
     def LoadData(self, path, sep=";"):
         self._file_data = pd.read_csv(path, sep=sep)
-        self._features = self._file_data.iloc[:, 1:].values
+        self._features = self._file_data.iloc[:, 2:].values
         
         self._features = self._scaler.fit_transform(self._features)
         self._classes = self._file_data.iloc[:, 0].values
@@ -73,7 +74,7 @@ class CrackClassifier:
         self._correctly_predicted = (self._testing_set_classes == self._predictions).sum()
         self._incorrectly_predicted = len(self._predictions) - self._correctly_predicted
 
-        conf_matrix = confusion_matrix(self._testing_set_classes, self._predictions)
+        self._confusion_matrix = confusion_matrix(self._testing_set_classes, self._predictions)
 
         print(f"Test Result for model: {type(self._classifier).__name__}")  
         print("_______________________________________________")
@@ -82,7 +83,7 @@ class CrackClassifier:
         print(f"Accuracy: {100 * self._correctly_predicted / len(self._predictions):.2f}%")
         print("_______________________________________________")
         print(f"Confusion Matrix: \n")
-        disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix)
+        disp = ConfusionMatrixDisplay(confusion_matrix=self._confusion_matrix)
         disp.plot()
 
     def Show2DPlot(self):
