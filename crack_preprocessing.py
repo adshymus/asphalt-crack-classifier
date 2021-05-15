@@ -318,6 +318,8 @@ class CrackDetector:
     def __calcMaximumElongation(self):
         max_elongation = 0.0
         total_elongation = 0.0
+        self._averageElongation = 0.0
+        
         for index, blob in enumerate(self._blobs):
             rect = cv2.minAreaRect(blob)
             box = cv2.boxPoints(rect)
@@ -339,8 +341,6 @@ class CrackDetector:
 
         if len(self._blobs) != 0:
             self._averageElongation = total_elongation / len(self._blobs)
-        else:
-            self._averageElongation = 0.0
 
     def __calculateDistance(x1, y1, x2, y2):
         return math.sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2))
