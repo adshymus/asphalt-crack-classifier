@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from scipy.optimize import curve_fit
 from skimage.measure import block_reduce
 
 class CrackDetector:
@@ -319,7 +318,7 @@ class CrackDetector:
         max_elongation = 0.0
         total_elongation = 0.0
         self._averageElongation = 0.0
-        
+
         for index, blob in enumerate(self._blobs):
             rect = cv2.minAreaRect(blob)
             box = cv2.boxPoints(rect)

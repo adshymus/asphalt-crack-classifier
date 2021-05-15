@@ -6,11 +6,11 @@ import matplotlib.image as mpimg
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score, classification_report
 from crack_preprocessing import CrackDetector
 from matplotlib.colors import ListedColormap
 
-class CrackClassifier:
+class CrackClassifier(object):
     def __init__(self):
         self._detector = CrackDetector()
         self._scaler = StandardScaler()
@@ -34,10 +34,12 @@ class CrackClassifier:
     def LoadData(self, path, sep=";"):
         self._file_data = pd.read_csv(path, sep=sep)
         self._features = self._file_data.iloc[:, 2:].values
-        
         self._features = self._scaler.fit_transform(self._features)
         self._classes = self._file_data.iloc[:, 0].values
         self._classes = LabelEncoder().fit_transform(self._classes)
+        self.SplitData()
+    
+    def SplitData(self):
         self._training_set, self._testing_set, self._training_set_classes, self._testing_set_classes = train_test_split(self._features, self._classes, test_size=0.2, random_state=42)
         self._principle_components = self._pca.fit_transform(self._features)
 
@@ -72,13 +74,18 @@ class CrackClassifier:
 
             except:
                 print(f"error occured when prediction file {file}")
-
-    def ShowTestingResults(self, extra_info = None, save = False):
+    
+    def PredictTestingSet(self):
         self._predictions = self._classifier.predict(self._testing_set)
         self._correctly_predicted = (self._testing_set_classes == self._predictions).sum()
-        self._incorrectly_predicted = len(self._predictions) - self._correctly_predicted
+        self._incorrectly_predicted = self._testing_set_classes.shape[0] - self._correctly_predicted
 
+    def FindConfusionMatrix(self):
         self._confusion_matrix = confusion_matrix(self._testing_set_classes, self._predictions)
+
+    def ShowTestingResults(self, extra_info = None, save = False):
+        self.PredictTestingSet()
+        self.FindConfusionMatrix()
 
         if save:
             file = open("output.txt", "w")
