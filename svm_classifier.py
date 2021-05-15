@@ -10,11 +10,9 @@ class SVMClassifier(CrackClassifier):
 
     def Show2DPlot(self, resolution = 0.02):
         super().Show2DPlot()
-        # setup marker generator and color map
         data = self._principle_components[:, 0:2]
         self._classifier.fit(data, self._classes)
 
-        # plot the decision surface
         x1_min, x1_max = data[:, 0].min() - 1, data[:, 0].max() + 1
         x2_min, x2_max = data[:, 1].min() - 1, data[:, 1].max() + 1
         xx1, xx2 = np.meshgrid(np.arange(x1_min, x1_max, resolution),

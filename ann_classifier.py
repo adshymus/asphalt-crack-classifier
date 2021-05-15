@@ -18,7 +18,7 @@ class ANNClassifier(CrackClassifier):
         super().SplitData()
     
     def Train(self):
-        self._classifier.fit(self._training_set, self._training_set_classes, batch_size = 1, epochs = 20)
+        self._classifier.fit(self._training_set, self._training_set_classes, batch_size = 4, epochs = 50)
     
     def PredictTestingSet(self):
         super().PredictTestingSet()
