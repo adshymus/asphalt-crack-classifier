@@ -42,7 +42,7 @@ class CrackClassifier:
         self._principle_components = self._pca.fit_transform(self._features)
 
     def ShowExplainedVarianceRatio(self):
-        return self._pca.explained_variance_ratio_
+        print(self._pca.explained_variance_ratio_)
 
     def Train(self):
         self._classifier.fit(self._training_set, self._training_set_classes)
