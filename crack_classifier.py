@@ -18,6 +18,7 @@ class CrackClassifier(object):
         self._principle_components = None
         self._classifier = None
         self._confusion_matrix = None
+        self._encoder = LabelEncoder()
         self._file_data = []
         self._features = []
         self._classes = []
@@ -36,12 +37,15 @@ class CrackClassifier(object):
         self._features = self._file_data.iloc[:, 2:].values
         self._features = self._scaler.fit_transform(self._features)
         self._classes = self._file_data.iloc[:, 0].values
-        self._classes = LabelEncoder().fit_transform(self._classes)
+        self._classes = self._encoder.fit_transform(self._classes)
         self.SplitData()
     
     def SplitData(self):
         self._training_set, self._testing_set, self._training_set_classes, self._testing_set_classes = train_test_split(self._features, self._classes, test_size=0.2, random_state=42)
         self._principle_components = self._pca.fit_transform(self._features)
+
+    def ShowClassIndices(self):
+        print(self._encoder.classes_)
 
     def ShowExplainedVarianceRatio(self):
         print(self._pca.explained_variance_ratio_)
