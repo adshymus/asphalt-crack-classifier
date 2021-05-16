@@ -181,6 +181,16 @@ class CrackDetector:
 
         if save:
             fig.savefig('fig.jpg', dpi=150)
+    
+    def ShowHistogram(self, image, save = False):
+        histr = cv2.calcHist(image,[0],None,[256],[0,256])
+        plt.plot(histr,color = 'b')
+        plt.grid(color = 'black', linestyle = '--', linewidth = 0.5)
+        plt.xlim([0,256])
+        if save:
+            plt.savefig('hist.jpg', dpi=150)
+        else:
+            plt.show()
 
     def LoadImageFromPath(self, path):
         try:
@@ -355,10 +365,9 @@ class CrackDetector:
         padded_image = self.__padding(image,a)
 
         filtered_image = np.zeros(padded_image.shape)
-        max_range = H+a+1
 
-        for i in range(a, max_range):
-            for j in range(a, max_range):
+        for i in range(a, H+a+1):
+            for j in range(a, W+a+1):
                 value = self.__Lvl_A(padded_image,i,j,s,sMax)
                 filtered_image[i,j] = value
 
